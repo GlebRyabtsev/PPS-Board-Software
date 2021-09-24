@@ -30,7 +30,6 @@ void EADC::setup() {
 }
 
 void EADC::write_reg(uint8_t reg, uint16_t value) {
-  Serial.println("Write reg");
   uint16_t cmd_word = (_ADC_CMD_WREG_MSK | ((uint16_t) reg << 7));
   spi_begin_transaction(spi_settings, cs);
 
