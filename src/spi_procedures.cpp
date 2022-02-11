@@ -7,16 +7,16 @@
 uint8_t chip_select;
 
 void spi_begin_transaction(SPISettings settings, uint8_t cs) {
-  chip_select = cs;
-  digitalWrite(MOSI, 0);
-  SPI.begin();
-  SPI.beginTransaction(settings);
-  digitalWrite(chip_select, 0);
+    chip_select = cs;
+    digitalWrite(MOSI, 0);
+    SPI.begin();
+    SPI.beginTransaction(settings);
+    digitalWrite(chip_select, 0);
 }
 
 void spi_end_transaction() {
-  digitalWrite(chip_select, 1);
-  SPI.endTransaction();
-  SPI.end();
-  digitalWrite(MOSI, 1);
+    digitalWrite(chip_select, 1);
+    SPI.endTransaction();
+    SPI.end();
+    digitalWrite(MOSI, 1);
 }

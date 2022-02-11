@@ -5,18 +5,27 @@
 #include <Arduino.h>
 #include <EADC.h>
 #include "SMPS.h"
-#include "DAC.h"
+#include "LDO.h"
 
 #define _CONNECTION_REQUEST_CMD 0x00
 #define _SET_VOLTAGE_REQUEST_CMD 0X01
 #define _READ_VOLTAGE_REQUEST_CMD 0x02
 #define _READ_CURRENT_REQUEST_CMD 0x03
-#define _UPDATE_CURRENT_CALIBRATION_REQUEST_CMD 0x04
-#define _UPDATE_VOLTAGE_CALIBRATION_REQUEST_CMD 0x05
+#define _CHANGE_CHANNEL_MODE_REQUEST_CMD 0x04
+#define _CALIBRATAION_REQUEST_CMD 0x05
+
+#define _LINEAR_CALIBRATION 0x00
+
+#define _N_CHANNELS 2
+
+#define _CHANNEL_MODE_DISABLED 0x00
+#define _CHANNEL_MODE_STANDARD 0x01
 
 //#define FEEDBACK_THRESHOLD_ENABLE
 
 #define LDO_OUTPUT_COEFFICIENT (65536.0 * 6.0 / 2500.0)
+
+/* FUNCTION PROTOTYPES */
 
 void process_serial_request();
 
@@ -28,64 +37,90 @@ void handle_read_voltage_request();
 
 void handle_read_current_request();
 
+void handle_change_channel_mode_request();
+
+void handle_calibration_request();
+
 void send_standard_acknowledgement();
 
 void send_response(uint8_t *data, uint8_t length);
 
-void handle_update_current_calibration_request();
+/* HARDWARE */
 
-EADC adc1 = EADC{2, 13, 5};
-SMPS smps1 = SMPS{8, 9};
-DAC dac1 = DAC{10};
+EADC adc[] = {EADC{2, 13, 5}, EADC{3, 6, 12}};
+SMPS smps[] = {SMPS{8, 9}, SMPS{0, 1}};
+LDO ldo[] = {LDO{10}, LDO{4}};
+
+uint16_t ldo_val[] = {0, 0};
+EADC::VOLTAGE_CURRENT vc_measured[2];
+
+/* STANDARD_MODE_OPERATION */
+
+float v_target[] = {1.0, 1.0};
+float k[] = {0.8, 0.8};
+
+/* SERIAL CONNECTION */
 
 boolean connected = false;
 uint8_t serial_data_buffer[256];
+uint8_t &ch_byte = serial_data_buffer[0];
 uint8_t serial_data_length;
 
-float v_target_1 = 1000;
-float v_target_2 = 0;
-
-float k1, k2 = 0.8;
-
-uint16_t ldo1, ldo2 = 0;
 
 void setup() {
     Serial.begin(115200);
+
+    _delay_ms(10000);
+    Serial.println("Hello -1");
+
     EADC::configure_clock();
     //SPI.begin();
     _delay_ms(200);
 
-    adc1.setup();
-    smps1.setup();
-    dac1.setup();
+    _delay_ms(10000);
+    Serial.println("Hello 0");
 
-    smps1.enable();
-    smps1.write(0xff);
-    dac1.write(ldo1);
+    for (int i = 0; i < _N_CHANNELS; i++) {
+        adc[i].setup();
+        smps[i].setup();
+        ldo[i].setup();
+        smps[i].enable();
+        smps[i].write(0xff);
+        ldo[i].write(ldo_val[i]);
+    }
+    _delay_ms(100); // just in case
+    adc[0].synchornize();
+    adc[1].synchornize();
+    _delay_ms(10000);
+    Serial.println("Hello 1");
 }
 
-EADC::VOLTAGE_CURRENT vc_measured_1;
-
 void loop() {
-    while (digitalRead(13));
-    /* feedback control */
-    vc_measured_1 = adc1.read_voltage_current();
-    auto delta = (int16_t) (0.8 * 4.37 * (v_target_1 - vc_measured_1.voltage));
 
-    //Serial.println(delta)
-#ifdef FEEDBACK_THRESHOLD_ENABLE
-    if(abs(delta) > 100) {
-#endif
-    ldo1 += delta;
-    dac1.write(ldo1);
-#ifdef FEEDBACK_THRESHOLD_ENABLE
-    }
-#endif
-
-    _delay_ms(4);
-    if (Serial.available()) {
-        process_serial_request();
-    }
+//    while (!adc[1].available()); // Channel 2 was synchronized last, so when it's ready, Ch. 1 should also be ready
+//
+///* feedback control */
+//    for(int i = 0; i < _N_CHANNELS; i++) {
+//        vc_measured[i] = adc[i].read_voltage_current();
+//        auto delta = (int16_t) (0.8 * 4.37 * (v_target[i] - vc_measured[i].voltage));
+//
+//#ifdef FEEDBACK_THRESHOLD_ENABLE
+//        if(abs(delta) > 100) {
+//#endif
+//        ldo_val[i] += delta;
+//        ldo[i].write(ldo_val[i]);
+//#ifdef FEEDBACK_THRESHOLD_ENABLE
+//        }
+//#endif
+//    }
+//
+//    if (Serial.available()) {
+//        process_serial_request();
+//    }
+    ldo[0].write(3000);
+    ldo[1].write(3000);
+    _delay_ms(100);
+    Serial.println("Hello");
 }
 
 void process_serial_request() {
@@ -121,20 +156,14 @@ void process_serial_request() {
         case _READ_CURRENT_REQUEST_CMD:
             handle_read_current_request();
             break;
-        case _UPDATE_CURRENT_CALIBRATION_REQUEST_CMD:
-            handle_update_current_calibration_request();
+        case _CHANGE_CHANNEL_MODE_REQUEST_CMD:
+            handle_change_channel_mode_request();
+            break;
+        case _CALIBRATAION_REQUEST_CMD:
+            handle_calibration_request();
+            break;
         default:
             break;
-    }
-}
-
-void handle_update_current_calibration_request() {
-    if (!connected) return;
-    if (serial_data_buffer[0] > 1) return;
-    if (serial_data_buffer[0] == 0) {
-        smps1.disable();
-        _delay_ms(5000);
-
     }
 }
 
@@ -145,42 +174,50 @@ void handle_connection_request() {
 
 void handle_set_voltage_request() {
     if (!connected) return;
-    if (serial_data_buffer[0] > 1) return;
+    if (ch_byte >= _N_CHANNELS) return;
     uint16_t v = (((uint16_t) serial_data_buffer[1]) << 8) | (serial_data_buffer[2]);
-    if (serial_data_buffer[0] == 0) v_target_1 = v;
-    else v_target_2 = v;
-//  Serial.print(v_target_1);
-//  Serial.print(' ');
-//  Serial.print(ldo1);
-//  Serial.print(' ');
-//  Serial.print(vc_measured_1.voltage);
-//  Serial.print(' ');
-//  Serial.println((int16_t)(0.8 * 4.37 * (v_target_1 - vc_measured_1.voltage)));
+    v_target[ch_byte] = v;
     send_standard_acknowledgement();
 }
 
 void handle_read_voltage_request() {
     if (!connected) return;
-    if (serial_data_buffer[0] > 1) return;
-    int16_t v = 0;
-    if (serial_data_buffer[0] == 0) {
-        v = (int16_t) (vc_measured_1.voltage);
-    } else {
-        v = 0;
-    }
-    send_response(reinterpret_cast<uint8_t *>(&v), 2);
+    if (ch_byte >= _N_CHANNELS) return;
+    send_response(reinterpret_cast<uint8_t *>(&vc_measured[ch_byte].voltage), 2);
 }
 
 void handle_read_current_request() {
     if (!connected) return;
-    if (serial_data_buffer[0] > 1) return;
-    int16_t c = 0;
-    if (serial_data_buffer[0] == 0) {
-        c = (int16_t) (vc_measured_1.current);
-    } else {
-        c = 0;
+    if (ch_byte >= _N_CHANNELS) return;
+    send_response(reinterpret_cast<uint8_t *>(&vc_measured[ch_byte].current), 2);
+}
+
+void handle_change_channel_mode_request() {
+    if (!connected) return;
+    if (ch_byte >= _N_CHANNELS) return;
+    switch(serial_data_buffer[1]) {
+        case _CHANNEL_MODE_DISABLED:
+            smps[ch_byte].disable();
+            break;
+        case _CHANNEL_MODE_STANDARD:
+            smps[ch_byte].enable();
+            break;
+        default:
+            return;
     }
-    send_response(reinterpret_cast<uint8_t *>(&c), 2);
+    send_standard_acknowledgement();
+}
+
+void handle_calibration_request() {
+    if (!connected) return;
+    if (ch_byte >= _N_CHANNELS) return;
+    switch (serial_data_buffer[1]) {
+        case _LINEAR_CALIBRATION:
+            // todo: implement calibration
+            break;
+        default:
+            return;
+    }
 }
 
 void send_standard_acknowledgement() {

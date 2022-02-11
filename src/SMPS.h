@@ -12,15 +12,19 @@
 
 class SMPS {
 private:
-  uint8_t en, cs;
-  static const SPISettings spi_settings;
+    uint8_t en, cs;
+    static const SPISettings spi_settings;
 
 public:
-  SMPS(const uint8_t &en, const uint8_t &cs);
-  void setup();
-  void enable();
-  void disable();
-  void write(uint8_t value);
+    SMPS(const uint8_t &en, const uint8_t &cs);
+
+    void setup();
+
+    void enable();
+
+    void disable();
+
+    void write(uint8_t value);
 };
 
 
