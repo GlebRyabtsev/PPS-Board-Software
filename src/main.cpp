@@ -47,9 +47,9 @@ void send_response(uint8_t *data, uint8_t length);
 
 /* HARDWARE */
 
-EADC adc[] = {EADC{2, 13, 5}, EADC{3, 6, 12}};
-SMPS smps[] = {SMPS{8, 9}, SMPS{0, 1}};
-LDO ldo[] = {LDO{10}, LDO{4}};
+EADC adc = EADC{2, 13, 5};
+SMPS smps = SMPS{8, 9};
+LDO ldo = LDO{10};
 
 uint16_t ldo_val[] = {0, 0};
 EADC::VOLTAGE_CURRENT vc_measured[2];
@@ -70,29 +70,29 @@ uint8_t serial_data_length;
 void setup() {
     Serial.begin(115200);
 
-    _delay_ms(10000);
-    Serial.println("Hello -1");
-
     EADC::configure_clock();
     //SPI.begin();
     _delay_ms(200);
 
-    _delay_ms(10000);
-    Serial.println("Hello 0");
 
-    for (int i = 0; i < _N_CHANNELS; i++) {
+    /*for (int i = 0; i < _N_CHANNELS; i++) {
         adc[i].setup();
         smps[i].setup();
         ldo[i].setup();
         smps[i].enable();
         smps[i].write(0xff);
         ldo[i].write(ldo_val[i]);
-    }
-    _delay_ms(100); // just in case
-    adc[0].synchornize();
-    adc[1].synchornize();
-    _delay_ms(10000);
-    Serial.println("Hello 1");
+    }*/
+    adc.setup();
+    smps.setup();
+    ldo.setup();
+
+    smps.enable();
+    smps.write(0xff);
+    ldo.write(0);
+//    _delay_ms(100); // just in case
+//    adc[0].synchornize();
+//    adc[1].synchornize();
 }
 
 void loop() {
@@ -117,10 +117,10 @@ void loop() {
 //    if (Serial.available()) {
 //        process_serial_request();
 //    }
-    ldo[0].write(3000);
-    ldo[1].write(3000);
-    _delay_ms(100);
-    Serial.println("Hello");
+    ldo.write(10000);
+//    ldo[1].write(3000);
+    _delay_ms(4);
+//    Serial.println("Hello");
 }
 
 void process_serial_request() {
