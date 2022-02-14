@@ -67,25 +67,8 @@ void setup() {
 EADC::VOLTAGE_CURRENT vc_measured_1;
 
 void loop() {
-    while (digitalRead(13));
-    /* feedback control */
-    vc_measured_1 = adc1.read_voltage_current();
-    auto delta = (int16_t) (0.8 * 4.37 * (v_target_1 - vc_measured_1.voltage));
-
-    //Serial.println(delta)
-#ifdef FEEDBACK_THRESHOLD_ENABLE
-    if(abs(delta) > 100) {
-#endif
-    ldo1 += delta;
-    dac1.write(ldo1);
-#ifdef FEEDBACK_THRESHOLD_ENABLE
-    }
-#endif
-
+    dac1.write(20000);
     _delay_ms(4);
-    if (Serial.available()) {
-        process_serial_request();
-    }
 }
 
 void process_serial_request() {
