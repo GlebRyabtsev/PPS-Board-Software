@@ -69,16 +69,11 @@ uint8_t serial_data_length;
 
 void setup() {
     Serial.begin(115200);
-
-    _delay_ms(10000);
-    Serial.println("Hello -1");
+    delay(1000);
 
     EADC::configure_clock();
     //SPI.begin();
     _delay_ms(200);
-
-    _delay_ms(10000);
-    Serial.println("Hello 0");
 
     for (int i = 0; i < _N_CHANNELS; i++) {
         adc[i].setup();
@@ -88,11 +83,10 @@ void setup() {
         smps[i].write(0xff);
         ldo[i].write(ldo_val[i]);
     }
+
     _delay_ms(100); // just in case
     adc[0].synchronize();
     adc[1].synchronize();
-    _delay_ms(10000);
-    Serial.println("Hello 1");
 }
 
 void loop() {
@@ -117,10 +111,10 @@ void loop() {
     if (Serial.available()) {
         process_serial_request();
     }
+    _delay_ms(4);
 //    ldo[0].write(3000);
 //    ldo[1].write(3000);
 //    _delay_ms(100);
-//    Serial.println("Hello");
 }
 
 void process_serial_request() {
