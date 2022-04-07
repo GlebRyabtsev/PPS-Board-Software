@@ -80,7 +80,7 @@ EADC::ADC_RAW_VALUE EADC::read() {
 
 EADC::VOLTAGE_CURRENT EADC::read_voltage_current() {
     ADC_RAW_VALUE raw = read();
-    VOLTAGE_CURRENT result;
+    VOLTAGE_CURRENT result{};
 
     int32_t voltage_reading, current_reading;
 
@@ -91,14 +91,14 @@ EADC::VOLTAGE_CURRENT EADC::read_voltage_current() {
         //positive
         current_reading = (int32_t) raw.ch0;
     }
-    result.current = current_reading * current_cal.m + current_cal.n;
+    result.current = round(static_cast<float>(current_reading) * current_cal.m + current_cal.n);
 
     if (raw.ch1 & (uint32_t) (1 << 23)) {
         voltage_reading = ((int32_t) raw.ch1) - ((int32_t) 0xFFFFFF);
     } else {
-        voltage_reading = (float) raw.ch1;
+        voltage_reading = raw.ch1;
     }
-    result.voltage = voltage_reading * voltage_cal.m + voltage_cal.n;
+    result.voltage = round(static_cast<float>(voltage_reading) * voltage_cal.m + voltage_cal.n);
 
     return result;
 }

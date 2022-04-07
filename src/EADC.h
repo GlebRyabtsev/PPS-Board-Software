@@ -14,7 +14,7 @@ public:
     };
 
     struct VOLTAGE_CURRENT {
-        int16_t voltage, current;
+        int16_t voltage, current;  // voltage and current in mv, ma
     };
 
     struct CALIBRATION {
@@ -26,8 +26,8 @@ private:
 
     uint8_t cs, drdy, sync_rst;
     static const SPISettings spi_settings;
-    CALIBRATION voltage_cal = {14400.0 / ((float) 0x7FFFFF), 0.0}; // in volts, gain 1, ratio 12
-    CALIBRATION current_cal = {6000.0 / ((float) 0x7FFFFF), -357.0}; // in amps, gain 2
+    CALIBRATION voltage_cal = {14400.0 / ((float) 0x7FFFFF), 0.0}; // in mv, gain 1, ratio 12
+    CALIBRATION current_cal = {6000.0 / ((float) 0x7FFFFF), -357.0}; // in ma, gain 2
 public:
     EADC(uint8_t cs, uint8_t drdy, uint8_t syncRst) : cs(cs), drdy(drdy), sync_rst(syncRst) {}
 
