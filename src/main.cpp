@@ -47,7 +47,7 @@ uint16_t extract_uint16(uint8_t pos);
 
 /* HARDWARE */
 
-EADC adc[] = {EADC{2, 13, 5}, EADC{3, 6, 12}};
+EADC adc[] = {EADC{2, 13, 5, 0}, EADC{3, 6, 12, 1}};
 SMPS smps[] = {SMPS{8, 9}, SMPS{0, 1}};
 LDO ldo[] = {LDO{10}, LDO{4}};
 

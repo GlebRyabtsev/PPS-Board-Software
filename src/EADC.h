@@ -26,8 +26,8 @@ public:
         CURRENT = 1 * sizeof(Calibration)
     };
 
-    static constexpr Calibration default_voltage_cal = {14400.0 / ((float) 0x7FFFFF), 0.0}; // gain 1, ratio 12
-    static constexpr Calibration default_current_cal = {6000.0 / ((float) 0x7FFFFF), -357.0}; // gain 2
+    static const Calibration default_voltage_cal; // todo: clang doesn't like that
+    static const Calibration default_current_cal;
 
     EADC(uint8_t cs, uint8_t drdy, uint8_t syncRst, uint8_t channel);
 

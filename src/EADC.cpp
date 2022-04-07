@@ -17,6 +17,8 @@
 #define _CAL_EEPROM_ADDR 0x00
 
 const SPISettings EADC::spi_settings = SPISettings{250000, MSBFIRST, SPI_MODE1};
+const EADC::Calibration EADC::default_voltage_cal{14400.0 / ((float) 0x7FFFFF), 0.0}; // gain 1, ratio 12 through resistor divider
+const EADC::Calibration EADC::default_current_cal{6000.0 / ((float) 0x7FFFFF), -357.0}; // gain 2
 
 void EADC::setup() {
     pinMode(cs, OUTPUT);
